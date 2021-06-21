@@ -1,13 +1,10 @@
 import { expect } from 'chai'
 import { shallowMount } from '@vue/test-utils'
-import HelloWorld from '@/components/HelloWorld.vue'
+import App from '@/App.vue'
 
-describe('HelloWorld.vue', () => {
-  it('renders props.msg when passed', () => {
-    const msg = 'new message'
-    const wrapper = shallowMount(HelloWorld, {
-      props: { msg }
-    })
-    expect(wrapper.text()).to.include(msg)
+describe('App.vue', () => {
+  it("The value in $data that is binded to the maxlength property of the the 'Title' field in the [Add reminder] form, { Should be equal to 30 }", () => {
+    const wrapper = shallowMount(App);
+    expect(wrapper.vm.$data.form.titleMaxLength).to.equal(30)
   })
 })

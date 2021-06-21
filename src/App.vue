@@ -35,23 +35,23 @@
         <input type="hidden" v-model="reminder.id" />
         <fieldset>
           <label for="reminderTitle">Title</label>
-          <input v-model="reminder.title" type="text" name="reminderTitle" maxlength="30" required/>
+          <input v-model="reminder.title" type="text" id="reminderTitle" name="reminderTitle" :maxlength="[form.titleMaxLength]" placeholder="How will you call your reminder?" required/>
         </fieldset>
         <fieldset>
           <label for="reminderTitle">Date</label>
-          <input v-model="reminder.date" type="date" name="reminderDate" :max="[form.maxDate]" :min="[form.minDate]" required />
+          <input v-model="reminder.date" type="date" id="reminderDate" name="reminderDate" :max="[form.maxDate]" :min="[form.minDate]" required />
         </fieldset>
         <fieldset>
           <label for="reminderTitle">Time</label>
-          <input v-model="reminder.time" type="time" name="reminderTime"  required />
+          <input v-model="reminder.time" type="time" id="reminderTime" name="reminderTime"  required />
         </fieldset>
         <fieldset>
           <label for="reminderTitle">Color</label>
-          <input v-model="reminder.color" type="color" name="reminderColor" />
+          <input v-model="reminder.color" type="color" id="reminderColor" name="reminderColor" />
         </fieldset>
         <fieldset>
           <label for="reminderTitle">City</label>
-          <input v-model="reminder.city" type="text" name="reminderCity" required />
+          <input v-model="reminder.city" type="text" id="reminderCity" name="reminderCity" placeholder="Please type the name of the city" required />
         </fieldset>
         <input type="submit" :value="[reminder.id ? 'Save Reminder' : 'Add Reminder']" class="btn btn-block" />
       </form>
@@ -85,16 +85,24 @@ export default {
       calendar: [],
       form: {
         maxDate: moment().endOf('month').format('YYYY-MM-DD'),
-        minDate: moment().startOf('month').format('YYYY-MM-DD')
+        minDate: moment().startOf('month').format('YYYY-MM-DD'),
+        titleMaxLength: 30
       },
       reminder: {
         id: null,
-        title: "Reminder Title",
+        // Some default Values for faster debug
+        // title: "Reminder Title",
+        // date: moment().format('YYYY-MM-DD'),
+        // time: moment().format('HH:MM'),
+        // color: "#1f1f72",
+        // city: "New York",
+        // weather: ""
+        title: "",
         date: moment().format('YYYY-MM-DD'),
         time: moment().format('HH:MM'),
         color: "#1f1f72",
-        city: "New York",
-        weather: ""
+        city: "",
+        weather: ""      
       }
     }
   },
@@ -224,7 +232,8 @@ export default {
       let weather
       
       // await fetch(this.weather_api+'forecast?q='+this.reminder.city+'&cnt=10&units=metric&APPID='+this.api_key)
-      // Couldn't really find a way to get an exact day... Not to mention the ammount of results is limited to 8 days, so even in the best scenario, its kind of unreliable to use this one (as reminders too much ahead would not have any weather info)
+      // Couldn't really find a way to get an exact day... Not to mention the ammount of results is limited to 30 days (ahead from the api call time), so even in the best scenario, its kind of unreliable to use this one (as reminders too much ahead would not have any weather info)
+      // Closest Option was a 30 day climate forecast from OpenWeather, but it needs a subscription plan to work, not the free one.
       // So I just set it up using the current weather info at the time of ADDING the reminder, just as a placeholder.
       await fetch(this.weather_api+'weather?q='+this.reminder.city+'&units=metric&APPID='+this.api_key)
            .then(response => response.json())
@@ -316,249 +325,248 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 0px;
+  #app {
+    font-family: Avenir, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-align: center;
+    color: #2c3e50;
+    margin-top: 0px;
 
-  > section {
-    display: flex;
-    flex-direction: row;
-  }
-}
-
-#calendar {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    min-height: 85vh;
-    width: 80%;  
-
-    .monthHeader {
+    > section {
       display: flex;
-      justify-content: space-between;
-      margin: .2vw 0 .2vw;
-      font-size: 1vw;
-      font-family: sans-serif;
-      text-transform: uppercase;
-
-      button {
-        background: #21217a;
-        border: none;
-        border-radius: .2vw;
-        color: #FFF;
-        padding: .2vw .5vw;
-        transition: all .2s linear;
-        cursor: pointer;
-        margin: 0 .2vw;
-
-        span {
-          font-size: .8em;
-          position: relative;
-          top: -.05vw;
-          display: inline-block;
-          margin: 0 .2vw;
-        }
-
-        &:hover {
-          background: #080843;
-        }
-
-      }
+      flex-direction: row;
     }
+  }
 
-    .daysHeader {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      background: #21217a;
-      border-top-left-radius: .5vw;
-      border-top-right-radius: .5vw;
-      color: #FFF;
-      padding: .5vw .2vw;
-      font-size: .8vw;
-      text-align: center;
-      font-family: sans-serif;
+  #calendar {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 85vh;
+      width: 80%;  
 
-      > div {
+      .monthHeader {
+        display: flex;
+        justify-content: space-between;
+        margin: .2vw 0 .2vw;
+        font-size: 1vw;
+        font-family: sans-serif;
+        text-transform: uppercase;
 
-      }
-    }
-
-    .grid-days {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      max-height: 91vh;
-      text-align: left;
-      border: 1px solid #21217a;;  
-      -webkit-touch-callout: none;
-      user-select: none;  
-      border-bottom-left-radius: .5vw;
-      border-bottom-right-radius: .5vw;  
-      overflow: hidden;
-      box-shadow: 0px 8px 20px 0px rgba(0,0,0,0.75);
-
-      .dayItem {
-        border: 1px solid #21217a;
-        position: relative;
-        transition: all .2s linear;
-        cursor: pointer;
-        height: 15vh;
-        overflow: hidden;
-
-        &.disabled {
-          pointer-events: none;
-        }
-
-        // just a little extra to make the calendar look fancier
-        .bgDay {
-            display: block;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 12vw;
-            opacity: .04;
-            pointer-events: none;
-        }    
-
-        .clearSchedule {
-          position: absolute;
-          display: block;
-          width: 1vw;
-          height: 1vw;
-          font-size: .8vw;
-          line-height: .8vw;
-          text-align: center;
-          curspor: pointer;
-          z-index: 5;
-          top: 0;
-          right: 0;
-          color: #FFF;
+        button {
           background: #21217a;
-          border-bottom-left-radius: 2vw;
+          border: none;
+          border-radius: .2vw;
+          color: #FFF;
+          padding: .2vw .5vw;
           transition: all .2s linear;
+          cursor: pointer;
+          margin: 0 .2vw;
 
-          i {
-            transform: rotate(45deg);
-            display: block;
-            font-size: 1.2em;
+          span {
+            font-size: .8em;
+            position: relative;
+            top: -.05vw;
+            display: inline-block;
+            margin: 0 .2vw;
           }
 
           &:hover {
-            background: #000;
+            background: #080843;
           }
+
         }
+      }
 
-        .reminders {
-          font-size: .7vw;
-          margin: 0;
-          padding: 1.7em .3em 0 .3em;
-          list-style: none;
-          height: 100%;    
-          display: flex;
-          flex-direction: column;
-          box-sizing: border-box;
-          overflow-x: hidden;
-          overflow-y: auto;
-          
-          li {
-            padding: .3em .3em .3em .5em;
-            border-radius: .3vw;
-            color: #333;
-            border: 2px solid;
-            border-left: 4px solid;
-            display: block;
-            margin-bottom: .5em;
-            background: #FFF;
-            -webkit-touch-callout: none;
-            user-select: none;
-            position: relative;
+      .daysHeader {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        background: #21217a;
+        border-top-left-radius: .5vw;
+        border-top-right-radius: .5vw;
+        color: #FFF;
+        padding: .5vw .2vw;
+        font-size: .8vw;
+        text-align: center;
+        font-family: sans-serif;
 
-            .fa-edit {
+        > div {
+
+        }
+      }
+
+      .grid-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        max-height: 91vh;
+        text-align: left;
+        border: 1px solid #21217a;;  
+        -webkit-touch-callout: none;
+        user-select: none;  
+        border-bottom-left-radius: .5vw;
+        border-bottom-right-radius: .5vw;  
+        overflow: hidden;
+        box-shadow: 0px 8px 20px 0px rgba(0,0,0,0.75);
+
+        .dayItem {
+          border: 1px solid #21217a;
+          position: relative;
+          transition: all .2s linear;
+          cursor: pointer;
+          height: 15vh;
+          overflow: hidden;
+
+          &.disabled {
+            pointer-events: none;
+          }
+
+          // just a little extra to make the calendar look fancier
+          .bgDay {
+              display: block;
               position: absolute;
-              transition: all .2s linear;
               top: 50%;
-              right: 0;
-              opacity: 0;
-              transform: translateY(-50%) translateX(200%);
+              left: 50%;
+              transform: translate(-50%, -50%);
+              font-size: 12vw;
+              opacity: .04;
+              pointer-events: none;
+          }    
+
+          .clearSchedule {
+            position: absolute;
+            display: block;
+            width: 1vw;
+            height: 1vw;
+            font-size: .8vw;
+            line-height: .8vw;
+            text-align: center;
+            curspor: pointer;
+            z-index: 5;
+            top: 0;
+            right: 0;
+            color: #FFF;
+            background: #21217a;
+            border-bottom-left-radius: 2vw;
+            transition: all .2s linear;
+
+            i {
+              transform: rotate(45deg);
+              display: block;
+              font-size: 1.2em;
             }
 
             &:hover {
+              background: #000;
+            }
+          }
+
+          .reminders {
+            font-size: .7vw;
+            margin: 0;
+            padding: 1.7em .3em 0 .3em;
+            list-style: none;
+            height: 100%;    
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            
+            li {
+              padding: .3em .3em .3em .5em;
+              border-radius: .3vw;
+              color: #333;
+              border: 2px solid;
+              border-left: 4px solid;
+              display: block;
+              margin-bottom: .5em;
+              background: #FFF;
+              -webkit-touch-callout: none;
+              user-select: none;
+              position: relative;
+
               .fa-edit {
-                transform: translateY(-50%) translateX(-50%);
-                opacity: 1;
+                position: absolute;
+                transition: all .2s linear;
+                top: 50%;
+                right: 0;
+                opacity: 0;
+                transform: translateY(-50%) translateX(200%);
+              }
+
+              &:hover {
+                .fa-edit {
+                  transform: translateY(-50%) translateX(-50%);
+                  opacity: 1;
+                }
               }
             }
           }
-        }
 
 
-        &.isWeekend {
-          background: #e5e5e5;
+          &.isWeekend {
+            background: #e5e5e5;
+
+            .dayNumber {
+              &.currentMonth {
+                color: #1083bc !important;
+              }
+            }
+          }
+
+          &.selected {
+            background: #5eb4e1 !important;
+          }
+
+          &:hover {
+            background: #00000038;
+          }
 
           .dayNumber {
+            color: #333;
+            opacity: .5;
+            font-size: .8vw;
+            font-weight: bold;
+            position: absolute;
+            top: .1vw;
+            left: .1vw;
+
+            &.isToday {
+              border: 2px solid #cc0000;
+              border-radius: 50%;
+              transform: translate(-1px, -1px);
+            }
+
             &.currentMonth {
-              color: #1083bc !important;
+              opacity: 1;
             }
           }
         }
-
-        &.selected {
-          background: #5eb4e1 !important;
-        }
-
-        &:hover {
-          background: #00000038;
-        }
-
-        .dayNumber {
-          color: #333;
-          opacity: .5;
-          font-size: .8vw;
-          font-weight: bold;
-          position: absolute;
-          top: .1vw;
-          left: .1vw;
-
-          &.isToday {
-            border: 2px solid #cc0000;
-            border-radius: 50%;
-            transform: translate(-1px, -1px);
-          }
-
-          &.currentMonth {
-            opacity: 1;
-          }
-        }
       }
-    }
-}
+  }
 
-#form {
-  display: flex;
-  flex-direction: column;
-  width: 20%;
-  padding: 0 1vw;
-  box-sizing: border-box;
+  #form {
+    display: flex;
+    flex-direction: column;
+    width: 20%;
+    padding: 0 1vw;
+    box-sizing: border-box;
 
-  form {
-    border: none;
-    margin: 0;
-    padding: 0;
-
-    fieldset {
+    form {
       border: none;
+      margin: 0;
+      padding: 0;
 
-      label, input {
-        display: block;
-        text-align: left;
-        width: 100%;
+      fieldset {
+        border: none;
+
+        label, input {
+          display: block;
+          text-align: left;
+          width: 100%;
+        }
       }
     }
   }
-}
-
 </style>
