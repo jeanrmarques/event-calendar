@@ -2,11 +2,11 @@
   <section>
     <article id="calendar">
       <h4 class="monthHeader">
-        <button @click="decreaseMonth">
+        <button @click="changeMonth('back')">
           <i class="fas fa-arrow-left"></i> <span>Previous Month</span>
         </button>
-        {{ currentMonthData.name + " ~ " + currentMonthData.year }}
-        <button @click="increaseMonth">
+        <span><i class="far fa-calendar-alt"></i> {{ currentMonthData.name + " / " + currentMonthData.year }}</span>
+        <button @click="changeMonth('fwd')">
           <span>Next Month</span> <i class="fas fa-arrow-right"></i>
         </button>
       </h4>
@@ -40,7 +40,7 @@
             class="removeDayReminders"
             @click.stop="removeDayReminders(day)"
             v-if="day.reminders.length > 0"
-            ><i>+</i></span
+            ><i class="fas fa-times"></i></span
           >
           <ul class="reminders">
             <li
@@ -50,26 +50,32 @@
               :key="reminder.id"
               v-for="(reminder, index) in sortReminders(day.reminders)"
             >
-              <i class="fas fa-edit"></i>
               <span class="time">{{ reminder.time }}</span> -
               <span class="name">{{ reminder.title }}</span>
               <div class="extraInfo">
                 <span class="city">{{ reminder.city }}</span>
                 <span class="weather">({{ reminder.weather }})</span>
-                <i
-                  title="Remove this reminder"
-                  @click.stop.prevent="removeReminder(reminder)"
-                  class="fas fa-times"
-                ></i>
               </div>
+              <i class="fas fa-edit"></i>
+              <i
+                title="Remove this reminder"
+                @click.stop.prevent="removeReminder(reminder)"
+                class="fas fa-times"
+              ></i>              
             </li>
           </ul>
         </div>
       </div>
     </article>
     <article id="form">
-      <h4 v-if="!reminder.id">Add a reminder</h4>
-      <h4 v-else>Edit Reminder</h4>
+      <div class="appInfo">
+        <img src="./assets/logo.png" alt="VueJS" />
+        <h2>Calendar App</h2>
+        <h5>Made with VueJS</h5>
+        <hr />
+      </div>
+      <h4 v-if="!reminder.id"><i class="far fa-calendar-plus"></i> Add a reminder</h4>
+      <h4 v-else><i class="fas fa-edit"></i> Edit Reminder</h4>
       <form @submit="reminderSubmit">
         <input type="hidden" v-model="reminder.id" />
         <fieldset>
@@ -132,18 +138,15 @@
           class="btn btn-block"
         />
       </form>
-      <img src="./assets/logo.png" alt="VueJS" />
     </article>
   </section>
 </template>
 
 <script>
-// import Calendar from './components/Calendar.vue'
 import moment from "moment";
 
 export default {
   name: "App",
-  components: {},
   props: {
     weekdays: {
       type: Array,
@@ -184,6 +187,9 @@ export default {
     };
   },
   methods: {
+    // [Mandatory Feature]
+    // The main function, will add the days on the calendar div based on today's date (and create an object of the month to store in the Calendar array)
+    // The calendar array will hold all the months the user navigates to, for instance, right now it starts in june, so if you press 'previous month', it will create a new object for may, and store on Calendar, if you navigate back to june, it will then reuse the same array previously created. (the array has an object for each month, and each month has a few properties and an array of days, which have their reminders stored there).
     updateCalendar() {
       let monthArray = [];
       let endOfMonth = parseInt(
@@ -270,23 +276,26 @@ export default {
 
         this.calendar.push(monthToSave);
       }
-    },    
-    increaseMonth() {
-      this.selectedDate.add(1, "months");
+    },
+
+    //[Optional Feature]
+    // Changes the current month on the data object, and refreshes the calendar (It also changes the range of accepted dates on the form input) 
+    changeMonth(arg) {
+      // expects arg to be 'fwd' or 'back'
+      if(arg === "fwd"){
+        this.selectedDate.add(1, "months");
+      } else if(arg === "back") {
+        this.selectedDate.subtract(1, "months");
+      }
       this.form = {
         maxDate: this.selectedDate.endOf("month").format("YYYY-MM-DD"),
         minDate: this.selectedDate.startOf("month").format("YYYY-MM-DD"),
       };
       this.updateCalendar();
     },
-    decreaseMonth() {
-      this.selectedDate.subtract(1, "months");
-      this.form = {
-        maxDate: this.selectedDate.endOf("month").format("YYYY-MM-DD"),
-        minDate: this.selectedDate.startOf("month").format("YYYY-MM-DD"),
-      };
-      this.updateCalendar();
-    },
+
+    // [Extra Feature]
+    // Utility function to check if its today while doing the loop (So we can mark it)
     isToday(day) {
       let today = moment().format("YYYYMMMMDD");
       if (this.selectedDate.format("YYYYMMMM") + day == today) {
@@ -295,6 +304,9 @@ export default {
         return false;
       }
     },
+
+    // [Extra Feature]
+    // Utility function to autofill the date field when the user clicks on a day on the calendar.
     selectedDay(index, day) {
       let str = "";
       let date = "";
@@ -305,9 +317,14 @@ export default {
       date = this.selectedDate.format("YYYY-MM-") + str + day.dayNumber;
       this.reminder.date = date;
     },
+
+    // [Mandatory Feature]
+    // Clicking on a reminder will automatically start its editing, as it will autofill the form with the reminder data (and can be seen being changed live)
     selectedReminder(reminder) {
       this.reminder = reminder;
     },
+
+    // Utility function to get the day object based on a date (to manipulate its reminders data)
     getDayObject(date) {
       let resp = {
         month: moment(date).format("YYYYMM"),
@@ -316,6 +333,8 @@ export default {
 
       return resp;
     },
+
+    // Utility function that will parse the data before actually saving the reminder. (the weather fetch is also done here)
     async reminderSubmit(e) {
       e.preventDefault();
       let weatherRes;
@@ -330,7 +349,6 @@ export default {
         .then((response) => response.json())
         .then((data) => (weatherRes = data));
 
-
       const newReminder = {
         id: this.reminder.id,
         title: this.reminder.title,
@@ -338,11 +356,23 @@ export default {
         time: this.reminder.time,
         color: this.reminder.color,
         city: this.reminder.city,
-        weather: weatherRes.weather[0].main || "Weather not available"
+        weather: weatherRes.weather[0].main || "Weather not available",
       };
 
       this.addReminder(newReminder);
     },
+
+    //[Mandatory Feature]
+    // Adds a reminder on a selected day.
+    // A reminder has {Id, Title, Date, Time, Color, City, Weather}
+    // 
+    //* Id - Just a random generated number to keep reminders unique;
+    //* Title - Has a limit of 30 characters;
+    //* Date - Has to be in the selected month (no restriction for a day before today, even tho would make sense in a reminder calendar, could easily be implemented)
+    //* Time - Just a regular time input;
+    //* Color - User selected color from a color input;
+    //* City - City name typed by user (That will fetch the CURRENT weather on that location, even tho the requirement was to fetch the weather for the selected day, unfortunately I wasnt able to do so through the api I tried)
+    //* Weather - As cited above, it stores the weather information (simple), fetched through an api (it has a default text value in case the call fails or returns empty)
     addReminder(reminder) {
       let where = this.getDayObject(reminder.date);
       let monthObj = this.calendar.filter((m) => m.month === where.month);
@@ -367,6 +397,9 @@ export default {
         weather: "",
       };
     },
+
+    //[Mandatory Feature]
+    // Sorts the reminders when listing them on a given day.
     sortReminders: function (ar) {
       function compare(a, b) {
         if (a.time < b.time) return -1;
@@ -376,6 +409,9 @@ export default {
 
       return ar.sort(compare);
     },
+
+    //[Mandatory Feature]
+    // Remove a selected reminder.
     removeReminder(reminder) {
       let where = this.getDayObject(reminder.date);
       let monthObj = this.calendar.filter((m) => m.month === where.month);
@@ -385,9 +421,12 @@ export default {
       let index = reminders.findIndex((r) => r.id === reminder.id);
       reminders.splice(index, 1);
     },
+
+    //[Optional Feature]
+    // Removes all the reminders of the day sent as parameter.  
     removeDayReminders(day) {
       day.reminders = [];
-    },        
+    },
   },
   computed: {
     currentMonthData: function () {
@@ -410,6 +449,16 @@ export default {
 </script>
 
 <style lang="scss">
+
+
+// Vue color theme
+:root {
+  --main-color: #35495E;
+  --secondary-color: #41B883;
+  --fade-color: #00000038;
+  --light-color: #FFFFFF;
+}
+
 #app {
   font-family: "Montserrat", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -440,10 +489,10 @@ export default {
     text-transform: uppercase;
 
     button {
-      background: #21217a;
+      background: var(--main-color);
       border: none;
       border-radius: 0.2vw;
-      color: #fff;
+      color: var(--light-color);
       padding: 0.2vw 0.5vw;
       transition: all 0.2s linear;
       cursor: pointer;
@@ -466,10 +515,11 @@ export default {
   .daysHeader {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    background: #21217a;
-    border-top-left-radius: 0.5vw;
-    border-top-right-radius: 0.5vw;
-    color: #fff;
+    background: var(--main-color);
+    // border-top-left-radius: 0.5vw;
+    // border-top-right-radius: 0.5vw;
+    border-radius: .5vw .5vw 0 0;
+    color: var(--light-color);
     padding: 0.5vw 0.2vw;
     font-size: 0.8vw;
     text-align: center;
@@ -484,7 +534,7 @@ export default {
     grid-template-columns: repeat(7, 1fr);
     max-height: 91vh;
     text-align: left;
-    border: 1px solid #21217a;
+    border: 1px solid var(--main-color);
     -webkit-touch-callout: none;
     user-select: none;
     border-bottom-left-radius: 0.5vw;
@@ -493,7 +543,7 @@ export default {
     box-shadow: 0px 8px 20px 0px rgba(0, 0, 0, 0.75);
 
     .dayItem {
-      border: 1px solid #21217a;
+      border: 1px solid var(--main-color);
       position: relative;
       transition: all 0.2s linear;
       cursor: pointer;
@@ -529,14 +579,16 @@ export default {
         top: 0;
         right: 0;
         color: #fff;
-        background: #21217a;
+        background: var(--main-color);
         border-bottom-left-radius: 2vw;
         transition: all 0.2s linear;
 
         i {
-          transform: rotate(45deg);
           display: block;
-          font-size: 1.2em;
+          font-size: 0.9em;
+          position: relative;
+          top: 0px;
+          right: -2px;
         }
 
         &:hover {
@@ -558,7 +610,7 @@ export default {
 
         li {
           padding: 0.3em 0.3em 0.3em 0.5em;
-          border-radius: 0.3vw;
+          border-radius: 0 .8vw 0 .8vw;
           color: #333;
           border: 2px solid;
           border-left: 4px solid;
@@ -568,6 +620,7 @@ export default {
           -webkit-touch-callout: none;
           user-select: none;
           position: relative;
+          overflow: hidden;
 
           .fa-edit {
             position: absolute;
@@ -578,9 +631,23 @@ export default {
             transform: translateY(-50%) translateX(200%);
           }
 
+          .fa-times {
+            position: absolute;
+            transition: all 0.2s linear;
+            top: 50%;
+            right: 0;
+            opacity: 0;
+            transform: translateY(-50%) translateX(200%);
+          }
+
           &:hover {
             .fa-edit {
-              transform: translateY(-50%) translateX(-50%);
+              transform: translateY(25%) translateX(-32%);
+              opacity: 1;
+            }
+
+            .fa-times {
+              transform: translateY(-115%) translateX(-93%);
               opacity: 1;
             }
           }
@@ -592,7 +659,7 @@ export default {
 
         .dayNumber {
           &.currentMonth {
-            color: #1083bc !important;
+            color: var(--secondary-color) !important;
           }
         }
       }
@@ -602,7 +669,7 @@ export default {
       }
 
       &:hover {
-        background: #00000038;
+        background: var(--fade-color);
       }
 
       .dayNumber {
@@ -634,6 +701,14 @@ export default {
   width: 20%;
   padding: 0 1vw;
   box-sizing: border-box;
+
+  .appInfo {
+    img {
+      max-width: 50%;
+      margin: 0 auto;
+    }
+  }
+
 
   form {
     border: none;
