@@ -5,7 +5,10 @@
         <button @click="changeMonth('back')">
           <i class="fas fa-arrow-left"></i> <span>Previous Month</span>
         </button>
-        <span><i class="far fa-calendar-alt"></i> {{ currentMonthData.name + " / " + currentMonthData.year }}</span>
+        <span
+          ><i class="far fa-calendar-alt"></i>
+          {{ currentMonthData.name + " / " + currentMonthData.year }}</span
+        >
         <button @click="changeMonth('fwd')">
           <span>Next Month</span> <i class="fas fa-arrow-right"></i>
         </button>
@@ -15,7 +18,7 @@
       </div>
       <div class="grid-days">
         <div
-          @click.stop="selectedDay(index, day)"
+          @click.stop="reminder.date = day.fullDate"
           :class="[
             day.isCurrentMonth ? '' : 'disabled',
             day.isWeekend ? 'isWeekend' : '',
@@ -38,17 +41,19 @@
           <span
             title="Remove all reminders from this date."
             class="removeDayReminders"
-            @click.stop="removeDayReminders(day)"
-            v-if="day.reminders.length > 0"
-            ><i class="fas fa-times"></i></span
-          >
+            @click.stop="removeDayReminders(day.fullDate)"
+            v-if="getReminders(day.fullDate).length > 0"
+            ><i class="fas fa-times"></i
+          ></span>
           <ul class="reminders">
             <li
               @click.stop="selectedReminder(reminder, index)"
               :title="[reminder.time, reminder.city, reminder.title]"
               :style="{ 'border-color': reminder.color }"
               :key="reminder.id"
-              v-for="(reminder, index) in sortReminders(day.reminders)"
+              v-for="(reminder, index) in sortReminders(
+                getReminders(day.fullDate)
+              )"
             >
               <span class="time">{{ reminder.time }}</span> -
               <span class="name">{{ reminder.title }}</span>
@@ -61,7 +66,7 @@
                 title="Remove this reminder"
                 @click.stop.prevent="removeReminder(reminder)"
                 class="fas fa-times"
-              ></i>              
+              ></i>
             </li>
           </ul>
         </div>
@@ -74,12 +79,16 @@
         <h5>Made with VueJS</h5>
         <hr />
       </div>
-      <h4 v-if="!reminder.id"><i class="far fa-calendar-plus"></i> Add a reminder</h4>
+      <h4 v-if="!reminder.id">
+        <i class="far fa-calendar-plus"></i> Add a reminder
+      </h4>
       <h4 v-else><i class="fas fa-edit"></i> Edit Reminder</h4>
       <form @submit="reminderSubmit">
         <input type="hidden" v-model="reminder.id" />
         <fieldset>
-          <label for="reminderTitle">Title</label>
+          <label for="reminderTitle"
+            ><i class="fas fa-heading"></i> Title</label
+          >
           <input
             v-model="reminder.title"
             type="text"
@@ -91,7 +100,9 @@
           />
         </fieldset>
         <fieldset>
-          <label for="reminderTitle">Date</label>
+          <label for="reminderTitle"
+            ><i class="far fa-calendar"></i> Date</label
+          >
           <input
             v-model="reminder.date"
             type="date"
@@ -103,7 +114,7 @@
           />
         </fieldset>
         <fieldset>
-          <label for="reminderTitle">Time</label>
+          <label for="reminderTitle"><i class="far fa-clock"></i> Time</label>
           <input
             v-model="reminder.time"
             type="time"
@@ -113,7 +124,9 @@
           />
         </fieldset>
         <fieldset>
-          <label for="reminderTitle">Color</label>
+          <label for="reminderTitle"
+            ><i class="fas fa-palette"></i> Color</label
+          >
           <input
             v-model="reminder.color"
             type="color"
@@ -122,7 +135,7 @@
           />
         </fieldset>
         <fieldset>
-          <label for="reminderTitle">City</label>
+          <label for="reminderTitle"><i class="fas fa-city"></i> City</label>
           <input
             v-model="reminder.city"
             type="text"
@@ -137,6 +150,9 @@
           :value="[reminder.id ? 'Save Reminder' : 'Add Reminder']"
           class="btn btn-block"
         />
+        <button @click="resetForm()" v-if="reminder.id" class="btn btn-block">
+          Cancel
+        </button>
       </form>
     </article>
   </section>
@@ -170,9 +186,10 @@ export default {
       weather_api: "http://api.openweathermap.org/data/2.5/",
       weather_res: {},
       calendar: [],
+      reminders: [],
       form: {
-        maxDate: moment().endOf("month").format("YYYY-MM-DD"),
         minDate: moment().startOf("month").format("YYYY-MM-DD"),
+        maxDate: moment().endOf("month").format("YYYY-MM-DD"),
         titleMaxLength: 30,
       },
       reminder: {
@@ -188,8 +205,7 @@ export default {
   },
   methods: {
     // [Mandatory Feature]
-    // The main function, will add the days on the calendar div based on today's date (and create an object of the month to store in the Calendar array)
-    // The calendar array will hold all the months the user navigates to, for instance, right now it starts in june, so if you press 'previous month', it will create a new object for may, and store on Calendar, if you navigate back to june, it will then reuse the same array previously created. (the array has an object for each month, and each month has a few properties and an array of days, which have their reminders stored there).
+    // Populates the grid with the days of the month, giving certain properties to each day so we can track it better (isCurrentMonth, isWeekend, etc.)
     updateCalendar() {
       let monthArray = [];
       let endOfMonth = parseInt(
@@ -202,19 +218,6 @@ export default {
       let days = Math.ceil((endOfMonth + startOfMonthWeekDay) / 7) * 7;
       let newMonth = true;
 
-      if (this.calendar.length > 0) {
-        const storedMonth = this.calendar.filter(
-          (m) => m.month === this.selectedDate.format("YYYYMM")
-        );
-        if (storedMonth.length > 0) {
-          //Forcing vue to refresh the computed property
-          this.calendar.push({});
-          this.calendar.pop();
-          //
-          newMonth = false;
-        }
-      }
-
       if (newMonth) {
         for (let i = 1; i <= days; i++) {
           let currentDay = {};
@@ -223,6 +226,8 @@ export default {
           let month = this.selectedDate.format("MMMM");
           let isCurrentMonth = true;
           let isWeekend = false;
+          let monthNumber = parseInt(this.selectedDate.format("MM"));
+          let yearNumber = parseInt(this.selectedDate.format("YYYY"));
           let lastDayOfPrevMonth = parseInt(
             this.selectedDate
               .clone()
@@ -233,14 +238,31 @@ export default {
           let endOfMonth = parseInt(
             this.selectedDate.clone().endOf("month").format("DD")
           );
+          let fullDate;
 
           if (val > 0 && val <= endOfMonth) {
             dayNumber = val;
           } else if (val > endOfMonth) {
             dayNumber = val - endOfMonth;
+            if (monthNumber == 12) {
+              monthNumber = 1;
+              yearNumber++;
+            } else {
+              monthNumber++;
+            }
           } else {
             dayNumber = lastDayOfPrevMonth + val;
+            if (monthNumber == 1) {
+              monthNumber = 12;
+              yearNumber--;
+            } else {
+              monthNumber--;
+            }
           }
+
+          let jsD = new Date(yearNumber + "-" + monthNumber + "-" + dayNumber);
+
+          fullDate = moment(jsD).format("YYYY-MM-DD");
 
           if (i % 7 == 1 || i % 7 == 0) {
             isWeekend = true;
@@ -261,30 +283,29 @@ export default {
 
           currentDay = {
             month: month,
+            fullDate: fullDate,
             dayNumber: dayNumber,
             isCurrentMonth: isCurrentMonth,
             isWeekend: isWeekend,
-            reminders: [],
           };
           monthArray.push(currentDay);
         }
         let monthToSave = {
-          month: this.selectedDate.format("YYYYMM"),
+          month: this.selectedDate.format("YYYY-MM-"),
           data: monthArray,
-          hasEvents: false,
         };
 
-        this.calendar.push(monthToSave);
+        this.calendar = monthToSave;
       }
     },
 
     //[Optional Feature]
-    // Changes the current month on the data object, and refreshes the calendar (It also changes the range of accepted dates on the form input) 
+    // Changes the current month on the data object, and refreshes the calendar (It also changes the range of accepted dates on the form input)
     changeMonth(arg) {
       // expects arg to be 'fwd' or 'back'
-      if(arg === "fwd"){
+      if (arg === "fwd") {
         this.selectedDate.add(1, "months");
-      } else if(arg === "back") {
+      } else if (arg === "back") {
         this.selectedDate.subtract(1, "months");
       }
       this.form = {
@@ -305,33 +326,10 @@ export default {
       }
     },
 
-    // [Extra Feature]
-    // Utility function to autofill the date field when the user clicks on a day on the calendar.
-    selectedDay(index, day) {
-      let str = "";
-      let date = "";
-      if (day.dayNumber < 10) {
-        str = "0";
-      }
-
-      date = this.selectedDate.format("YYYY-MM-") + str + day.dayNumber;
-      this.reminder.date = date;
-    },
-
     // [Mandatory Feature]
     // Clicking on a reminder will automatically start its editing, as it will autofill the form with the reminder data (and can be seen being changed live)
     selectedReminder(reminder) {
       this.reminder = reminder;
-    },
-
-    // Utility function to get the day object based on a date (to manipulate its reminders data)
-    getDayObject(date) {
-      let resp = {
-        month: moment(date).format("YYYYMM"),
-        day: parseInt(moment(date).format("DD")),
-      };
-
-      return resp;
     },
 
     // Utility function that will parse the data before actually saving the reminder. (the weather fetch is also done here)
@@ -365,7 +363,7 @@ export default {
     //[Mandatory Feature]
     // Adds a reminder on a selected day.
     // A reminder has {Id, Title, Date, Time, Color, City, Weather}
-    // 
+    //
     //* Id - Just a random generated number to keep reminders unique;
     //* Title - Has a limit of 30 characters;
     //* Date - Has to be in the selected month (no restriction for a day before today, even tho would make sense in a reminder calendar, could easily be implemented)
@@ -374,19 +372,14 @@ export default {
     //* City - City name typed by user (That will fetch the CURRENT weather on that location, even tho the requirement was to fetch the weather for the selected day, unfortunately I wasnt able to do so through the api I tried)
     //* Weather - As cited above, it stores the weather information (simple), fetched through an api (it has a default text value in case the call fails or returns empty)
     addReminder(reminder) {
-      let where = this.getDayObject(reminder.date);
-      let monthObj = this.calendar.filter((m) => m.month === where.month);
-      let daysArray = monthObj[0].data;
-      let dayObj = daysArray.filter((d) => d.dayNumber === where.day);
-
       if (!reminder.id) {
         reminder.id = Math.floor(Math.random() * 100000);
-        dayObj[0].reminders.push(reminder);
-      } else {
-        let editing = dayObj[0].reminders.filter((r) => r.id === reminder.id);
-        editing[0] = reminder;
       }
+      this.reminders = [...this.reminders, reminder];
+      this.resetForm();
+    },
 
+    resetForm() {
       this.reminder = {
         id: null,
         title: "",
@@ -413,32 +406,34 @@ export default {
     //[Mandatory Feature]
     // Remove a selected reminder.
     removeReminder(reminder) {
-      let where = this.getDayObject(reminder.date);
-      let monthObj = this.calendar.filter((m) => m.month === where.month);
-      let daysArray = monthObj[0].data;
-      let dayObj = daysArray.filter((d) => d.dayNumber === where.day);
-      let reminders = dayObj[0].reminders;
-      let index = reminders.findIndex((r) => r.id === reminder.id);
-      reminders.splice(index, 1);
+      let index = this.reminders.findIndex((r) => r.id === reminder.id);
+      this.reminders.splice(index, 1);
     },
 
     //[Optional Feature]
-    // Removes all the reminders of the day sent as parameter.  
+    // Removes all the reminders of the day sent as parameter.
     removeDayReminders(day) {
-      day.reminders = [];
+      let updated = this.reminders.filter(
+        (r) => r.date != moment(day).format("YYYY-MM-DD")
+      );
+      console.log(updated);
+      this.reminders = updated;
+    },
+    getReminders: function (date) {
+      let res = this.reminders.filter(
+        (r) => r.date === moment(date).format("YYYY-MM-DD")
+      );
+      return res;
     },
   },
   computed: {
     currentMonthData: function () {
-      let storedMonth = this.calendar.filter(
-        (m) => m.month === this.selectedDate.format("YYYYMM")
-      );
       let name = this.selectedDate.format("MMMM");
       let year = this.selectedDate.format("YYYY");
       return {
         name: name,
         year: year,
-        data: storedMonth[0].data,
+        data: this.calendar.data,
       };
     },
   },
@@ -449,14 +444,21 @@ export default {
 </script>
 
 <style lang="scss">
-
+html {
+  box-sizing: border-box;
+}
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
 
 // Vue color theme
 :root {
-  --main-color: #35495E;
-  --secondary-color: #41B883;
+  --main-color: #35495e;
+  --secondary-color: #41b883;
   --fade-color: #00000038;
-  --light-color: #FFFFFF;
+  --light-color: #ffffff;
 }
 
 #app {
@@ -518,7 +520,7 @@ export default {
     background: var(--main-color);
     // border-top-left-radius: 0.5vw;
     // border-top-right-radius: 0.5vw;
-    border-radius: .5vw .5vw 0 0;
+    border-radius: 0.5vw 0.5vw 0 0;
     color: var(--light-color);
     padding: 0.5vw 0.2vw;
     font-size: 0.8vw;
@@ -610,7 +612,7 @@ export default {
 
         li {
           padding: 0.3em 0.3em 0.3em 0.5em;
-          border-radius: 0 .8vw 0 .8vw;
+          border-radius: 0 0.8vw 0 0.8vw;
           color: #333;
           border: 2px solid;
           border-left: 4px solid;
@@ -703,26 +705,68 @@ export default {
   box-sizing: border-box;
 
   .appInfo {
+    h2 {
+      margin-top: 0.4vw;
+    }
+  }
+
+  fieldset {
+    padding: 0;
+  }
+
+  .appInfo {
     img {
       max-width: 50%;
       margin: 0 auto;
     }
   }
 
-
   form {
     border: none;
     margin: 0;
-    padding: 0;
+    padding: 1vw 2vw 2vw;
+    background: var(--secondary-color);
+    border-radius: 0.5vw;
+    border: 2px solid var(--main-color);
+
+    input {
+      padding: 0.2vw;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button,
+    input[type="submit"] {
+      background: var(--main-color);
+      border: none;
+      border-radius: 0.2vw;
+      color: var(--light-color);
+      padding: 0.4vw 0.7vw;
+      transition: all 0.2s linear;
+      cursor: pointer;
+      margin: 0 0.2vw;
+      font-size: 1vw;
+    }
+
+    input[type="color"] {
+      padding: 0 !important;
+      border-radius: 5px;
+    }
 
     fieldset {
       border: none;
+      margin-bottom: 1vw;
 
       label,
       input {
         display: block;
         text-align: left;
         width: 100%;
+        font-size: 0.8vw;
+      }
+
+      label {
+        margin-bottom: 0.3em;
       }
     }
   }
