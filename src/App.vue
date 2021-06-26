@@ -526,9 +526,6 @@ html {
     font-size: 0.8vw;
     text-align: center;
     font-family: sans-serif;
-
-    > div {
-    }
   }
 
   .grid-days {
@@ -576,7 +573,7 @@ html {
         font-size: 0.8vw;
         line-height: 0.8vw;
         text-align: center;
-        curspor: pointer;
+        cursor: pointer;
         z-index: 5;
         top: 0;
         right: 0;
